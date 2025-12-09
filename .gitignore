@@ -1,0 +1,22 @@
+# Ignore IDE settings
+.idea/
+# PyCharm 配置文件
+
+__pycache__/
+*.py[cod]
+
+# 大文件过滤 (模型权重)
+*.zip
+*.onnx
+*.pth
+
+# 日志和数据
+logs/
+logs_new/
+tb_logs/
+
+# 虚拟环境 (如果有)
+venv/
+env/
+# Ignore UE4 environment folder
+UE4_env/
