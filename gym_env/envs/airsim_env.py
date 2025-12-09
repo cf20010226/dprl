@@ -247,17 +247,26 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
         self.dynamic_model.set_goal(self.goal_distance)
         self.dynamic_model.reset()
 
-        # --- [新增] 可视化起终点 ---
+        # --- [修改] 可视化起终点 (修复 bad cast 报错) ---
+        # 1. 获取坐标数据 (假设它们是 [x, y, z] 的列表)
+        sp = self.dynamic_model.start_position
+        gp = self.dynamic_model.goal_position
+
+        # 2. 强制转换为 airsim.Vector3r 对象
+        # 注意：simPlotPoints 接受的是一个列表，所以外面要套一个 []
+        start_point_vec = [airsim.Vector3r(sp[0], sp[1], sp[2])]
+        goal_point_vec = [airsim.Vector3r(gp[0], gp[1], gp[2])]
+
+        # 3. 调用 API
         # 画起点 (蓝色)
-        start_pos = [self.dynamic_model.start_position]  # 注意要是列表的列表
-        self.client.simPlotPoints(start_pos, color_rgba=[0.0, 0.0, 1.0, 1.0], size=20, is_persistent=True)
+        self.client.simPlotPoints(start_point_vec, color_rgba=[0.0, 0.0, 1.0, 1.0], size=20, is_persistent=True)
 
         # 画终点 (红色)
-        goal_pos = [self.dynamic_model.goal_position]
-        self.client.simPlotPoints(goal_pos, color_rgba=[1.0, 0.0, 0.0, 1.0], size=20, is_persistent=True)
+        self.client.simPlotPoints(goal_point_vec, color_rgba=[1.0, 0.0, 0.0, 1.0], size=20, is_persistent=True)
+        # ------------------------------------------------
 
-        # 可选：画一条线连接起点和终点，帮助你看清楚方向
-        self.client.simPlotLineList(start_pos + goal_pos, color_rgba=[0.0, 1.0, 0.0, 0.5], thickness=5, is_persistent=True)
+        # # 可选：画一条线连接起点和终点，帮助你看清楚方向
+        # self.client.simPlotLineList(start_pos + goal_pos, color_rgba=[0.0, 1.0, 0.0, 0.5], thickness=5, is_persistent=True)
 
         # Reset episode counters and flags
         self.episode_num += 1
