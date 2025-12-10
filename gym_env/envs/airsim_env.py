@@ -101,7 +101,7 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
         """
         Load configuration and initialize the environment.
         """
-        # Read config options for environment, dynamics, and perception
+        # Read config options
         self.cfg = cfg
         self.env_name = cfg.get('options', 'env_name')
         self.dynamic_name = cfg.get('options', 'dynamic_name')
@@ -117,7 +117,7 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
         else:
             raise Exception("Invalid dynamic_name!", self.dynamic_name)
 
-        # Course learning and obstacle generation options
+        # Course learning options
         self.use_cl = cfg.getboolean('options', 'use_course_learning')
         self.generate_obstacles = cfg.getboolean('options', 'generate_obstacles')
 
@@ -167,37 +167,43 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
         self.previous_distance_from_des_point = 0
         self.previous_direction = 0
 
-        # Load physical/environmental parameters from config
+        # Load parameters
         self.crash_distance = cfg.getfloat('multirotor_new', 'crash_distance')
         self.accept_radius = cfg.getfloat('multirotor_new', 'accept_radius')
         self.max_depth_meters = cfg.getint('environment', 'max_depth_meters')
         self.screen_height = cfg.getint('environment', 'screen_height')
         self.screen_width = cfg.getint('environment', 'screen_width')
 
-        # Override difficulty if curriculum learning is not used
+        # --- [关键修复] 这里的逻辑之前漏了一步 ---
         if not self.use_cl:
+            # 如果不使用课程学习（比如推理模式），强制设为最高难度
             self.difficulty_level = 4
 
-        # Generate obstacles if enabled
+        # [新增] 必须在这里立即更新 current_obstacle_num
+        # 否则 current_obstacle_num 还是 __init__ 里初始化的 0
+        self.current_obstacle_num = self.difficulty_map[self.difficulty_level]
+        # -------------------------------------
+
+        # Generate obstacles
         if self.generate_obstacles:
             if self.env_name == 'Hover':
                 self.obstacle_positions = self.generate_obstacle_positions(self.obstacle_range, min_distance=12,
                                                                            num_obstacles=30)
                 self.set_all_obstacles()
             elif self.env_name == 'Nav':
+                # 现在这里读到的 self.current_obstacle_num 就是正确的 25 了
                 self.obstacle_positions = self.generate_obstacle_positions(self.obstacle_range, min_distance=10,
                                                                            num_obstacles=self.current_obstacle_num)
                 self.set_all_obstacles()
 
-        # Configure noise models
+        # Configure noise
         self.gaussian_std = cfg.getfloat('noise', 'gaussian_std')
         self.salt_pepper_prob = cfg.getfloat('noise', 'salt_pepper_prob')
         self.motion_blur_kernel_size = cfg.getint('noise', 'motion_blur_kernel_size')
         self.state_feature_noise_std = cfg.getfloat('noise', 'state_feature_noise_std')
 
-        # Set action and observation spaces
+        # Action and Obs space
         self.action_space = self.dynamic_model.action_space
-
         if self.perception_type == 'depth_noise':
             self.observation_space = spaces.Box(low=0, high=255,
                                                 shape=(self.screen_height, self.screen_width, 3),
@@ -207,68 +213,77 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
                                                 shape=(self.screen_height, self.screen_width, 2),
                                                 dtype=np.uint8)
 
-        # Load reward type if specified
+        # Reward type
         try:
             self.reward_type = cfg.get('options', 'reward_type')
             print('Reward type: ', self.reward_type)
         except NoOptionError:
             self.reward_type = None
-
     # ! ---------------------key function-------------------------------------
     def reset(self):
         """
         Reset the environment for a new episode.
         """
+        # ---------------------------------------------------------------------
+        # 1. 课程学习逻辑
+        # ---------------------------------------------------------------------
         if self.use_cl and self.env_name == 'Nav':
-            # 检查当前场景里的障碍物数量是否符合当前难度
-            # 注意：self.obstacle_names 存储了当前生成的所有障碍物名字
             if len(self.obstacle_names) != self.current_obstacle_num:
-                print(
-                    f"[Reset] Updating obstacles for Level {self.difficulty_level}: {len(self.obstacle_names)} -> {self.current_obstacle_num}")
-
-                # 1. 删掉旧的
+                print(f"[Reset] Updating obstacles for Level {self.difficulty_level}")
                 self.delete_all_obstacles()
-                self.obstacle_names = []  # 清空列表
-
-                # 2. 生成新的坐标
-                # 记得在这里加上随机种子，如果你希望同一难度下地图不变 (random.seed(42))
-                # 如果希望完全随机泛化，就不要加 seed
+                self.obstacle_names = []
                 self.obstacle_positions = self.generate_obstacle_positions(
                     self.obstacle_range,
                     min_distance=10,
                     num_obstacles=self.current_obstacle_num
                 )
-
-                # 3. 放置新的
                 self.set_all_obstacles()
 
-        # Reset UAV state using dynamic model
+        # ---------------------------------------------------------------------
+        # 2. 重置无人机
+        # ---------------------------------------------------------------------
         self.dynamic_model.set_start(self.obstacle_range, self.work_space_x, self.work_space_y)
         self.dynamic_model.set_goal(self.goal_distance)
         self.dynamic_model.reset()
 
-        # --- [修改] 可视化起终点 (修复 bad cast 报错) ---
-        # 1. 获取坐标数据 (假设它们是 [x, y, z] 的列表)
-        sp = self.dynamic_model.start_position
-        gp = self.dynamic_model.goal_position
+        # ---------------------------------------------------------------------
+        # 3. 可视化优化 (只画线，不画字，防止重影)
+        # ---------------------------------------------------------------------
+        # 关键步骤：清除上一局的所有标记 (旗杆)
+        self.client.simFlushPersistentMarkers()
 
-        # 2. 强制转换为 airsim.Vector3r 对象
-        # 注意：simPlotPoints 接受的是一个列表，所以外面要套一个 []
-        start_point_vec = [airsim.Vector3r(sp[0], sp[1], sp[2])]
-        goal_point_vec = [airsim.Vector3r(gp[0], gp[1], gp[2])]
+        sp = self.dynamic_model.start_position  # [x, y, z]
+        gp = self.dynamic_model.goal_position  # [x, y, z]
 
-        # 3. 调用 API
-        # 画起点 (蓝色)
-        self.client.simPlotPoints(start_point_vec, color_rgba=[0.0, 0.0, 1.0, 1.0], size=20, is_persistent=True)
+        # 设置旗杆高度：从地面(2米)到空中(-10米)
+        pole_bottom = 2.0
+        pole_top = -10.0
 
-        # 画终点 (红色)
-        self.client.simPlotPoints(goal_point_vec, color_rgba=[1.0, 0.0, 0.0, 1.0], size=20, is_persistent=True)
-        # ------------------------------------------------
+        # 起点旗杆 (蓝色)
+        p1_start = airsim.Vector3r(sp[0], sp[1], pole_bottom)
+        p1_end = airsim.Vector3r(sp[0], sp[1], pole_top)
 
-        # # 可选：画一条线连接起点和终点，帮助你看清楚方向
-        # self.client.simPlotLineList(start_pos + goal_pos, color_rgba=[0.0, 1.0, 0.0, 0.5], thickness=5, is_persistent=True)
+        # 终点旗杆 (红色)
+        p2_start = airsim.Vector3r(gp[0], gp[1], pole_bottom)
+        p2_end = airsim.Vector3r(gp[0], gp[1], pole_top)
 
-        # Reset episode counters and flags
+        # 画线 (is_persistent=True 保证一直显示，直到下一局被 Flush 清除)
+        try:
+            # 蓝色起点杆
+            self.client.simPlotLineList([p1_start, p1_end], color_rgba=[0.0, 0.0, 1.0, 1.0], thickness=20.0,
+                                        is_persistent=True)
+            # 红色终点杆
+            self.client.simPlotLineList([p2_start, p2_end], color_rgba=[1.0, 0.0, 0.0, 1.0], thickness=20.0,
+                                        is_persistent=True)
+            # 绿色连接线
+            self.client.simPlotLineList([p1_end, p2_end], color_rgba=[0.0, 1.0, 0.0, 0.5], thickness=10.0,
+                                        is_persistent=True)
+        except Exception as e:
+            print(f"Viz Error: {e}")
+
+        # ---------------------------------------------------------------------
+        # 4. 重置计数器
+        # ---------------------------------------------------------------------
         self.episode_num += 1
         self.step_num = 0
         self.cumulated_episode_reward = 0
@@ -277,7 +292,6 @@ class AirsimGymEnv(gym.Env, QtCore.QThread):
         self.previous_direction = 0
         self.trajectory_list = []
 
-        # Return initial observation
         obs = self.get_obs()
         return obs
 

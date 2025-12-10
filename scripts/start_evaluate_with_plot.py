@@ -15,7 +15,7 @@ def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     config_file = os.path.join(base_dir, '..', 'configs', 'config_new.ini')
 
-    model_file = os.path.join(eval_path, 'models/newModels/model_250000.zip')
+    model_file = os.path.join(eval_path, 'models/newModels/model_200000.zip')
     total_eval_episodes = 10  # Number of evaluation episodes
 
     # Step 1: Launch the Qt application

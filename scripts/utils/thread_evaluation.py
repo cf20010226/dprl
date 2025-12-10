@@ -64,7 +64,23 @@ class EvaluateThread(QtCore.QThread):
         # Create and configure environment
         self.env = gym.make('airsim-env-v0')
         self.env.set_config(self.cfg)
+        # --- [新增] 强制推理环境为满状态 (Level 4) ---
+        print(">>> FORCING EVALUATION DIFFICULTY TO LEVEL 4 <<<")
+        self.env.use_cl = False  # 关闭课程学习
+        self.env.difficulty_level = 4  # 设为最高等级
+        self.env.current_obstacle_num = self.env.difficulty_map[4]  # 更新数量为 25
 
+        # 立即刷新障碍物 (清除旧的，生成 25 个新的)
+        # 这里的 generate_obstacle_positions 会调用你代码里的 seed(42)，保证地图固定
+        if self.env.env_name == 'Nav':
+            self.env.delete_all_obstacles()
+            self.env.obstacle_names = []
+            self.env.obstacle_positions = self.env.generate_obstacle_positions(
+                self.env.obstacle_range,
+                min_distance=10,
+                num_obstacles=self.env.current_obstacle_num
+            )
+            self.env.set_all_obstacles()
         # Store paths and evaluation settings
         self.eval_path = eval_path
         self.model_file = model_file
