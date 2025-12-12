@@ -440,7 +440,7 @@ def load_from_zip_file(
             for file_path in pth_files:
                 with archive.open(file_path, mode="r") as param_file:
                     # File has to be seekable, but param_file is not, so load in BytesIO first
-                    # fixed in python >= 3.7
+                    # fixed in python >= 3无障碍物.7
                     file_content = io.BytesIO()
                     file_content.write(param_file.read())
                     # go to start of file

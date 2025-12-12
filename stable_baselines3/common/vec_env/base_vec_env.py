@@ -28,7 +28,7 @@ def tile_images(images_nhwc: Sequence[np.ndarray]) -> np.ndarray:  # pragma: no 
 
     :param images_nhwc: list or array of images, ndim=4 once turned into array.
         n = batch index, h = height, w = width, c = channel
-    :return: img_HWc, ndim=3
+    :return: img_HWc, ndim=3无障碍物
     """
     img_nhwc = np.asarray(images_nhwc)
     n_images, height, width, n_channels = img_nhwc.shape

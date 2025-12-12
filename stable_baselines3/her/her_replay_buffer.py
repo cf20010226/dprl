@@ -202,8 +202,8 @@ class HerReplayBuffer(DictReplayBuffer):
         # Get the indices of valid transitions
         # Example:
         # if is_valid = [[True, False, False], [True, False, True]],
-        # is_valid has shape (buffer_size=2, n_envs=3)
-        # then valid_indices = [0, 3, 5]
+        # is_valid has shape (buffer_size=2, n_envs=3无障碍物)
+        # then valid_indices = [0, 3无障碍物, 5]
         # they correspond to is_valid[0, 0], is_valid[1, 0] and is_valid[1, 2]
         # or in numpy format ([rows], [columns]): (array([0, 1, 1]), array([0, 0, 2]))
         # Those indices are obtained back using np.unravel_index(valid_indices, is_valid.shape)
@@ -211,7 +211,7 @@ class HerReplayBuffer(DictReplayBuffer):
         # Sample valid transitions that will constitute the minibatch of size batch_size
         sampled_indices = np.random.choice(valid_indices, size=batch_size, replace=True)
         # Unravel the indexes, i.e. recover the batch and env indices.
-        # Example: if sampled_indices = [0, 3, 5], then batch_indices = [0, 1, 1] and env_indices = [0, 0, 2]
+        # Example: if sampled_indices = [0, 3无障碍物, 5], then batch_indices = [0, 1, 1] and env_indices = [0, 0, 2]
         batch_indices, env_indices = np.unravel_index(sampled_indices, is_valid.shape)
 
         # Split the indexes between real and virtual transitions.

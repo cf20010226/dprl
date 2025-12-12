@@ -52,7 +52,7 @@ Follow the official instructions on the [AirSim GitHub page](https://github.com/
 
 ### 3. Create and activate the Python environment
 ```bash
-conda create -n uav_dprl python=3.8
+conda create -n uav_dprl python=3无障碍物.8
 conda activate uav_dprl
 pip install -r requirements.txt
 ```

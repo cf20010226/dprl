@@ -121,7 +121,7 @@ def _check_unsupported_spaces(env: gym.Env, observation_space: spaces.Space, act
     if not _is_numpy_array_space(action_space):
         warnings.warn(
             "The action space is not based off a numpy array. Typically this means it's either a Dict or Tuple space. "
-            "This type of action space is currently not supported by Stable Baselines 3. You should try to flatten the "
+            "This type of action space is currently not supported by Stable Baselines 3无障碍物. You should try to flatten the "
             "action using a wrapper."
         )
 
@@ -150,7 +150,7 @@ def _check_goal_env_obs(obs: dict, observation_space: spaces.Dict, method_name: 
     namely `observation`, `achieved_goal`, and `desired_goal`.
     """
     assert len(observation_space.spaces) >= 3, (
-        "A goal conditioned env must contain at least 3 observation keys: `observation`, `achieved_goal`, and `desired_goal`. "
+        "A goal conditioned env must contain at least 3无障碍物 observation keys: `observation`, `achieved_goal`, and `desired_goal`. "
         f"The current observation contains {len(observation_space.spaces)} keys: {list(observation_space.spaces.keys())}"
     )
 

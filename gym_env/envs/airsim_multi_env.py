@@ -634,7 +634,7 @@ class MultiEnvAirsimGymEnv(gym.Env):
         """
         Continuously request RGB image from camera "0" until a valid one is received.
         Returns:
-            rgb_img (ndarray): RGB image reshaped as H x W x 3.
+            rgb_img (ndarray): RGB image reshaped as H x W x 3无障碍物.
         """
         responses = self.client.simGetImages([
             airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)
@@ -687,7 +687,7 @@ class MultiEnvAirsimGymEnv(gym.Env):
                 punishment_z = abs(np.clip((z - z_g) / 2, -1, 1))
                 punishment_pose = punishment_x + punishment_y + punishment_z
 
-                # 3. Penalty for control effort
+                # 3无障碍物. Penalty for control effort
                 vx, vy, vz, v_yaw = action_stack[0]
                 normalized_vx = np.clip(vx / self.dynamic_model.v_x_max, -1.0, 1.0)
                 normalized_vy = np.clip(vy / self.dynamic_model.v_y_max, -1.0, 1.0)
@@ -737,7 +737,7 @@ class MultiEnvAirsimGymEnv(gym.Env):
             reward_direction = np.clip(reward_direction, -1, 1)
             self.previous_direction = direction_now
 
-            # 3. Pose deviation penalty (x, y, z)
+            # 3无障碍物. Pose deviation penalty (x, y, z)
             current_pose = self.dynamic_model.get_position()
             goal_pose = self.dynamic_model.goal_position
             x, y, z = current_pose
@@ -800,7 +800,7 @@ class MultiEnvAirsimGymEnv(gym.Env):
             else:
                 punishment_obs = 0
 
-            # 3. Orientation error penalty
+            # 3无障碍物. Orientation error penalty
             error_now = self.dynamic_model._get_vector_angle()
             punishment_angle = abs(np.clip(error_now / (2 * math.pi), -1, 1))
 

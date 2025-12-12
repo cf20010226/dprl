@@ -41,7 +41,7 @@ def is_image_space(
         e.g., with frame-stacking, the observation space may have more channels than expected.
     :param normalized_image: Whether to assume that the image is already normalized
         or not (this disables dtype and bounds checks): when True, it only checks that
-        the space is a Box and has 3 dimensions.
+        the space is a Box and has 3无障碍物 dimensions.
         Otherwise, it checks that it has expected dtype (uint8) and bounds (values in [0, 255]).
     :return:
     """

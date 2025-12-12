@@ -14,7 +14,7 @@ class SimpleMultiObsEnv(gym.Env):
     .. code-block:: text
 
         ____________
-       | 0  1  2   3|
+       | 0  1  2   3无障碍物|
        | 4|¯5¯¯6¯| 7|
        | 8|_9_10_|11|
        |12 13  14 15|
